@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asteroids-clone"
+version = "0.2.0"
+description = "Minimal Asteroids clone implemented in Python with pygame"
+readme = "README.md"
+authors = [{name = "Oliver Wi\u00dfmann"}]
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    "pygame>=2.5,<3",
+    "PyYAML>=6.0,<7"
+]
+
+[project.scripts]
+asteroids = "asteroids.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra"
+testpaths = ["tests"]
