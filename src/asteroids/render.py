@@ -26,16 +26,6 @@ COLOR_TEXT = (230, 230, 230)
 COLOR_THRUST_FLAME = (255, 165, 0)
 
 
-def _generate_star_layer(
-    rng: random.Random, width: int, height: int, count: int, brightness: int, size: int
-) -> List[Tuple[float, float, int, int]]:
-    """Generate a layer of stars: (x, y, brightness, size)."""
-    return [
-        (rng.uniform(0, width), rng.uniform(0, height), brightness + rng.randint(-20, 20), size)
-        for _ in range(count)
-    ]
-
-
 class Renderer:
     def __init__(self, screen: pygame.Surface, config: Config) -> None:
         self.screen = screen
@@ -128,7 +118,7 @@ class Renderer:
         self.screen.blit(text, rect)
 
     def _draw_playfield(self, world: GameWorld, show_hud: bool, fps: Optional[float] = None) -> None:
-        # Get screen shake offset
+        # Get screen shake offset from world
         ox, oy = world.shake_offset
 
         if world.ship.alive:
@@ -155,7 +145,6 @@ class Renderer:
         direction = Vector2(math.cos(angle), math.sin(angle))
         left = Vector2(math.cos(angle + 2.5), math.sin(angle + 2.5))
         right = Vector2(math.cos(angle - 2.5), math.sin(angle - 2.5))
-        ox, oy = self.shake_offset.x, self.shake_offset.y
         nose = ship.position + direction * ship.radius
         tail_left = ship.position + left * ship.radius * 0.8
         tail_right = ship.position + right * ship.radius * 0.8
@@ -268,7 +257,6 @@ class Renderer:
         for popup in world.score_popups:
             progress = popup.age / popup.duration
             alpha = max(0, int(255 * (1.0 - progress)))
-            color = (255, 255, 100, alpha)
             surf = self.small_font.render(popup.text, True, (255, 255, 100))
             surf.set_alpha(alpha)
             x = int(popup.position.x + ox)

@@ -25,22 +25,6 @@ Die Runtime trennt klar zwischen Spielwelt-Logik (`GameWorld`), Eingaben (`Input
 - **Lokales Highscore-System**: Top-10 Bestenliste mit 3-Buchstaben Namenseingabe (Arcade-Stil), JSON-Persistenz
 - **Saucer-Bullet vs. Asteroid Kollision**: Wie im Originalspiel können Saucer-Geschosse Asteroiden zerstören
 
-## Features
-
-- Klassisches Asteroids-Gameplay mit Wellen, Saucers und Extra-Leben
-- **Partikel-/Explosionssystem** mit unterschiedlichen Farben pro Entity-Typ
-- **Parallax-Starfield** Hintergrund (3 Ebenen)
-- **Polygon-Asteroiden** mit individuellen, zufälligen Formen und Rotation
-- **Schubflammen-Animation** am Schiff beim Beschleunigen
-- **Bullet-Glow-Effekte** für bessere Sichtbarkeit
-- **Verbessertes Saucer-Design** mit Kuppel und blinkenden Lichtern
-- **Bildschirmshake** bei Explosionen (konfigurierbar)
-- **Wellenankündigungen** ("WAVE X" mit Ein-/Ausblendung)
-- **Score-Popups** an der Zerstörungsstelle
-- **Lokales Highscore-System** mit 3-Buchstaben-Namenentry (Arcade-Stil, JSON-Persistenz)
-- **Saucer-Bullets zerstören Asteroiden** (wie im Original-Arcade-Spiel)
-- Vollständig konfigurierbar über `config.yaml`
-
 ## Installation & Setup
 
 1. Abhängigkeiten installieren (empfohlen in einem virtuellen Environment):

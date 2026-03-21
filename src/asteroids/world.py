@@ -1,8 +1,9 @@
 """Game world state and update loop for the Asteroids clone."""
 from __future__ import annotations
 
+import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from .config import Config
@@ -15,15 +16,6 @@ from .particles import (
     ParticleSystem,
 )
 from .utils import Vector2, angle_to_vector, distance, pick_spawn_position
-
-
-@dataclass(slots=True)
-class ScorePopup:
-    """Floating score text that drifts upward and fades out."""
-    position: Vector2
-    text: str
-    age: float = 0.0
-    duration: float = 1.0
 
 
 @dataclass(slots=True)
@@ -192,31 +184,6 @@ class GameWorld:
 
     # endregion ----------------------------------------------------------------
 
-    def _trigger_shake(self, intensity: Optional[float] = None, duration: Optional[float] = None) -> None:
-        self.shake_intensity = intensity or self.config.effects.screen_shake_intensity
-        self.shake_timer = duration or self.config.effects.screen_shake_duration
-
-    def _add_score_popup(self, position: Vector2, points: int) -> None:
-        self.score_popups.append(
-            ScorePopup(
-                position=Vector2(position),
-                text=f"+{points}",
-                duration=self.config.effects.score_popup_duration,
-                speed=self.config.effects.score_popup_speed,
-            )
-        )
-
-    def _emit_explosion(self, position: Vector2, color: Tuple[int, int, int], count: Optional[int] = None) -> None:
-        cfg = self.config.particles
-        self.particles.emit_explosion(
-            position=position,
-            color=color,
-            count=count or cfg.explosion_count,
-            speed_range=(cfg.explosion_speed.min, cfg.explosion_speed.max),
-            lifetime_range=(cfg.explosion_lifetime.min, cfg.explosion_lifetime.max),
-            rng=self.rng,
-        )
-
     def update(self, dt: float, controls: ControlState) -> None:
         # Always update effects
         self.particles.update(dt)
@@ -238,13 +205,14 @@ class GameWorld:
         if controls.thrust:
             self.ship.apply_thrust(dt)
             if self.ship.alive:
+                cfg = self.config.particles
                 self.particles.emit_thrust(
                     self.ship.position,
                     self.ship.angle,
                     COLOR_THRUST,
-                    count=max(1, int(self.config.particles.thrust_rate * dt)),
-                    speed_range=(self.config.particles.thrust_speed.min, self.config.particles.thrust_speed.max),
-                    lifetime_range=(self.config.particles.thrust_lifetime.min, self.config.particles.thrust_lifetime.max),
+                    count=max(1, int(cfg.thrust_rate * dt)),
+                    speed_range=(cfg.thrust_speed.min, cfg.thrust_speed.max),
+                    lifetime_range=(cfg.thrust_lifetime.min, cfg.thrust_lifetime.max),
                     rng=self.rng,
                 )
         if controls.fire and self.ship.can_fire():
@@ -262,7 +230,6 @@ class GameWorld:
         self._update_entities(dt)
         self._handle_collisions()
         self._check_wave_completion(dt)
-        self._update_effects(dt)
 
         if not self.ship.alive and self.ship.ready_to_respawn():
             if not self.game_over and self.lives > 0:
@@ -270,27 +237,6 @@ class GameWorld:
                 self.ship.reset(Vector2(self.width / 2, self.height / 2))
             else:
                 self.game_over = True
-
-    def _update_effects(self, dt: float) -> None:
-        # Update particles
-        self.particles.update(dt)
-
-        # Update screen shake
-        if self.shake_timer > 0:
-            self.shake_timer -= dt
-            if self.shake_timer <= 0:
-                self.shake_timer = 0.0
-                self.shake_intensity = 0.0
-
-        # Update score popups
-        for popup in self.score_popups:
-            popup.age += dt
-            popup.position.y -= popup.speed * dt
-        self.score_popups = [p for p in self.score_popups if p.alive]
-
-        # Update wave announcement
-        if self.wave_announce_timer > 0:
-            self.wave_announce_timer -= dt
 
     def _update_entities(self, dt: float) -> None:
         # Update asteroids
@@ -362,10 +308,6 @@ class GameWorld:
             if self.saucer is not None and self.saucer.alive:
                 if distance(bullet.position, self.saucer.position) <= self.saucer.radius + bullet.radius:
                     bullet.active = False
-                    self._emit_explosion(self.saucer.position, COLOR_SAUCER_EXPLOSION, count=20)
-                    self._trigger_shake()
-                    score_key = "saucer_small" if self.saucer.kind == "small" else "saucer_large"
-                    self._add_score_popup(self.saucer.position, self.config.scoring[score_key])
                     self._destroy_saucer(by_player=True)
 
         # Saucer bullets -> ship
@@ -439,6 +381,7 @@ class GameWorld:
                     position=Vector2(position),
                     text=f"+{points}",
                     duration=self.config.effects.score_popup_duration,
+                    speed=self.config.effects.score_popup_speed,
                 )
             )
 
@@ -510,14 +453,13 @@ class GameWorld:
     def _update_score_popups(self, dt: float) -> None:
         for popup in self.score_popups:
             popup.age += dt
-            popup.position.y -= self.config.effects.score_popup_speed * dt
+            popup.position.y -= popup.speed * dt
         self.score_popups = [p for p in self.score_popups if p.age < p.duration]
 
     @property
     def shake_offset(self) -> Tuple[float, float]:
         if self.shake_timer <= 0:
             return (0.0, 0.0)
-        import math
         progress = self.shake_timer / self.config.effects.screen_shake_duration
         magnitude = self.shake_intensity * progress
         angle = self.rng.uniform(0, 2 * math.pi)

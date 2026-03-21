@@ -1,10 +1,9 @@
 """High level game loop management."""
 from __future__ import annotations
 
-from datetime import date
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import pygame
 
@@ -37,27 +36,14 @@ class AsteroidsGame:
         self.mode = GameMode.TITLE
         self.running = True
         # Highscore system
-        hs_path = None
-        if self.config.highscore.file_path:
-            hs_path = Path(self.config.highscore.file_path)
-        self.highscore_manager = HighscoreManager(
-            max_entries=self.config.highscore.max_entries,
-            file_path=hs_path,
-        )
-        self.entry_name = ""
-
-        # Highscore system
         hs_cfg = self.config.highscore
         hs_path = Path(hs_cfg.file_path) if hs_cfg.file_path else None
         self.highscore_manager = HighscoreManager(
             max_entries=hs_cfg.max_entries,
-            name_length=hs_cfg.name_length,
             file_path=hs_path,
         )
-
         # Name entry state
-        self._name_chars: List[str] = ["A", "A", "A"]
-        self._name_cursor: int = 0
+        self.entry_name = ""
 
     def run(self) -> None:
         while self.running:
@@ -74,23 +60,15 @@ class AsteroidsGame:
             if self.mode == GameMode.HIGHSCORE_ENTRY:
                 self.renderer.draw_name_entry(self.entry_name)
                 pygame.display.flip()
+            # Overlay for title screen highscores
+            elif self.mode == GameMode.TITLE and self.highscore_manager.entries:
+                self.renderer.draw_highscore_table(self.highscore_manager.entries)
+                pygame.display.flip()
         pygame.quit()
 
-    def _render(self, fps: float) -> None:
-        if self.mode == GameMode.TITLE:
-            self.renderer.draw(self.world, self.mode.value, fps=fps)
-            self.renderer.draw_highscore_table(self.highscore_manager.entries)
-            pygame.display.flip()
-        elif self.mode == GameMode.HIGHSCORE_ENTRY:
-            self.renderer.draw(self.world, self.mode.value, fps=fps)
-            self.renderer.draw_highscore_entry(self.world, self._name_chars, self._name_cursor)
-            pygame.display.flip()
-        else:
-            self.renderer.draw(self.world, self.mode.value, fps=fps)
-
-    def _dispatch(self, actions: FrameActions, dt: float, events) -> None:
+    def _dispatch(self, actions: FrameActions, dt: float) -> None:
         if actions.quit:
-            if self.mode in (GameMode.PLAYING, GameMode.PAUSED, GameMode.GAME_OVER, GameMode.HIGHSCORE_ENTRY):
+            if self.mode in (GameMode.PLAYING, GameMode.PAUSED, GameMode.GAME_OVER):
                 self.mode = GameMode.TITLE
                 self.world.reset()
             else:
@@ -105,8 +83,6 @@ class AsteroidsGame:
             self._handle_paused(actions)
         elif self.mode == GameMode.GAME_OVER:
             self._handle_game_over(actions)
-        elif self.mode == GameMode.HIGHSCORE_ENTRY:
-            self._handle_highscore_entry(events)
 
     def _handle_title(self, actions: FrameActions) -> None:
         if actions.start:
@@ -117,8 +93,6 @@ class AsteroidsGame:
         if actions.pause:
             self.mode = GameMode.PAUSED
             return
-        # Pass thrust state to renderer for flame drawing
-        self.renderer._draw_ship_thrusting = actions.controls.thrust
         self.world.update(dt, actions.controls)
         if self.world.game_over:
             if self.highscore_manager.qualifies(self.world.score):
