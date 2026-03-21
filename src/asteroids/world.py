@@ -3,10 +3,16 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from .config import Config
 from .entities import Asteroid, Bullet, Saucer, build_ship
+from .particles import (
+    COLOR_ASTEROID_EXPLOSION,
+    COLOR_SHIP_EXPLOSION,
+    COLOR_SAUCER_EXPLOSION,
+    ParticleSystem,
+)
 from .utils import Vector2, angle_to_vector, distance, pick_spawn_position
 
 
@@ -28,6 +34,25 @@ class ControlState:
         return direction
 
 
+@dataclass(slots=True)
+class ScorePopup:
+    """Floating score text that rises and fades out."""
+
+    position: Vector2
+    text: str
+    age: float = 0.0
+    duration: float = 1.0
+    speed: float = 60.0
+
+    @property
+    def alive(self) -> bool:
+        return self.age < self.duration
+
+    @property
+    def alpha(self) -> float:
+        return max(0.0, 1.0 - self.age / self.duration)
+
+
 class GameWorld:
     def __init__(self, config: Config) -> None:
         self.config = config
@@ -44,6 +69,7 @@ class GameWorld:
         self.extra_life_threshold = config.game.extra_life_every
         self.wave = 1
         self.wave_clear_timer = 0.0
+        self.wave_clear_pending = True
         self.saucer_spawn_timer = 0.0
         self.game_over = False
         self.asteroid_order = [size.name for size in config.asteroids.sizes]
@@ -51,6 +77,21 @@ class GameWorld:
             name: self.asteroid_order[idx + 1]
             for idx, name in enumerate(self.asteroid_order[:-1])
         }
+
+        # Particle system
+        self.particles = ParticleSystem(config.particles.max_particles)
+
+        # Screen shake state
+        self.shake_timer = 0.0
+        self.shake_intensity = 0.0
+
+        # Score popups
+        self.score_popups: List[ScorePopup] = []
+
+        # Wave announcement
+        self.wave_announce_timer = 0.0
+        self.wave_announce_wave = 0
+
         self.reset()
 
     def reset(self) -> None:
@@ -66,8 +107,15 @@ class GameWorld:
         self.extra_life_threshold = self.config.game.extra_life_every
         self.wave = 1
         self.wave_clear_timer = 0.0
+        self.wave_clear_pending = True
         self.game_over = False
         self.saucer_spawn_timer = self.config.saucer.spawn_delay_s.random(self.rng)
+        self.particles.clear()
+        self.shake_timer = 0.0
+        self.shake_intensity = 0.0
+        self.score_popups.clear()
+        self.wave_announce_timer = self.config.effects.wave_announce_duration
+        self.wave_announce_wave = 1
         self.spawn_wave(initial=True)
 
     # region spawning helpers -------------------------------------------------
@@ -102,7 +150,7 @@ class GameWorld:
             speed = size_cfg.speed_px_per_s.random(self.rng)
             speed *= 1 + (self.wave - 1) * self.config.asteroids.spawn.speed_scale_per_wave
             velocity = direction * speed
-        asteroid = Asteroid(size_cfg, position, velocity)
+        asteroid = Asteroid(size_cfg, position, velocity, rng=self.rng)
         self.asteroids.append(asteroid)
 
     def _spawn_saucer(self) -> None:
@@ -126,6 +174,7 @@ class GameWorld:
         start_y = self.rng.uniform(type_cfg.radius, self.height - type_cfg.radius)
         self.saucer = Saucer(
             self.config.saucer,
+            self.config.bullet,
             kind,
             Vector2(start_x, start_y),
             direction,
@@ -135,9 +184,35 @@ class GameWorld:
 
     # endregion ----------------------------------------------------------------
 
+    def _trigger_shake(self, intensity: Optional[float] = None, duration: Optional[float] = None) -> None:
+        self.shake_intensity = intensity or self.config.effects.screen_shake_intensity
+        self.shake_timer = duration or self.config.effects.screen_shake_duration
+
+    def _add_score_popup(self, position: Vector2, points: int) -> None:
+        self.score_popups.append(
+            ScorePopup(
+                position=Vector2(position),
+                text=f"+{points}",
+                duration=self.config.effects.score_popup_duration,
+                speed=self.config.effects.score_popup_speed,
+            )
+        )
+
+    def _emit_explosion(self, position: Vector2, color: Tuple[int, int, int], count: Optional[int] = None) -> None:
+        cfg = self.config.particles
+        self.particles.emit_explosion(
+            position=position,
+            color=color,
+            count=count or cfg.explosion_count,
+            speed_range=(cfg.explosion_speed.min, cfg.explosion_speed.max),
+            lifetime_range=(cfg.explosion_lifetime.min, cfg.explosion_lifetime.max),
+            rng=self.rng,
+        )
+
     def update(self, dt: float, controls: ControlState) -> None:
         if self.game_over:
             self._update_entities(dt)
+            self._update_effects(dt)
             return
 
         # Player controls
@@ -146,6 +221,16 @@ class GameWorld:
             self.ship.apply_rotation(rotation, dt)
         if controls.thrust:
             self.ship.apply_thrust(dt)
+            # Emit thrust particles
+            if self.ship.alive:
+                cfg = self.config.particles
+                self.particles.emit_thrust(
+                    position=self.ship.position,
+                    ship_angle=self.ship.angle,
+                    rng=self.rng,
+                    thrust_speed=(cfg.thrust_speed.min, cfg.thrust_speed.max),
+                    thrust_lifetime=(cfg.thrust_lifetime.min, cfg.thrust_lifetime.max),
+                )
         if controls.fire and self.ship.can_fire():
             if self._active_player_bullets() < self.config.bullet.pool_size:
                 bullet = self.ship.fire()
@@ -153,6 +238,8 @@ class GameWorld:
                     self.bullets.append(bullet)
         if controls.hyperspace:
             if not self.ship.trigger_hyperspace(self.rng, self.width, self.height):
+                self._emit_explosion(self.ship.position, COLOR_SHIP_EXPLOSION)
+                self._trigger_shake()
                 self._register_ship_loss()
 
         self.ship.update(dt, self.width, self.height)
@@ -160,6 +247,7 @@ class GameWorld:
         self._update_entities(dt)
         self._handle_collisions()
         self._check_wave_completion(dt)
+        self._update_effects(dt)
 
         if not self.ship.alive and self.ship.ready_to_respawn():
             if not self.game_over and self.lives > 0:
@@ -167,6 +255,27 @@ class GameWorld:
                 self.ship.reset(Vector2(self.width / 2, self.height / 2))
             else:
                 self.game_over = True
+
+    def _update_effects(self, dt: float) -> None:
+        # Update particles
+        self.particles.update(dt)
+
+        # Update screen shake
+        if self.shake_timer > 0:
+            self.shake_timer -= dt
+            if self.shake_timer <= 0:
+                self.shake_timer = 0.0
+                self.shake_intensity = 0.0
+
+        # Update score popups
+        for popup in self.score_popups:
+            popup.age += dt
+            popup.position.y -= popup.speed * dt
+        self.score_popups = [p for p in self.score_popups if p.alive]
+
+        # Update wave announcement
+        if self.wave_announce_timer > 0:
+            self.wave_announce_timer -= dt
 
     def _update_entities(self, dt: float) -> None:
         # Update asteroids
@@ -207,11 +316,17 @@ class GameWorld:
             for asteroid in self.asteroids:
                 if asteroid.alive and distance(self.ship.position, asteroid.position) <= asteroid.radius + self.ship.radius:
                     asteroid.alive = False
+                    self._emit_explosion(asteroid.position, COLOR_ASTEROID_EXPLOSION)
+                    self._emit_explosion(self.ship.position, COLOR_SHIP_EXPLOSION)
+                    self._trigger_shake()
                     self._register_ship_loss()
                     self._split_asteroid(asteroid)
                     break
             if self.saucer is not None and self.saucer.alive:
                 if distance(self.ship.position, self.saucer.position) <= self.saucer.radius + self.ship.radius:
+                    self._emit_explosion(self.saucer.position, COLOR_SAUCER_EXPLOSION)
+                    self._emit_explosion(self.ship.position, COLOR_SHIP_EXPLOSION)
+                    self._trigger_shake()
                     self.saucer.alive = False
                     self._register_ship_loss()
 
@@ -227,12 +342,19 @@ class GameWorld:
                     asteroid.alive = False
                     self._split_asteroid(asteroid)
                     self._add_score(asteroid.config.score)
+                    self._add_score_popup(asteroid.position, asteroid.config.score)
+                    self._emit_explosion(asteroid.position, COLOR_ASTEROID_EXPLOSION)
+                    self._trigger_shake(intensity=self.config.effects.screen_shake_intensity * 0.5)
                     break
             if not bullet.active:
                 continue
             if self.saucer is not None and self.saucer.alive:
                 if distance(bullet.position, self.saucer.position) <= self.saucer.radius + bullet.radius:
                     bullet.active = False
+                    self._emit_explosion(self.saucer.position, COLOR_SAUCER_EXPLOSION, count=20)
+                    self._trigger_shake()
+                    score_key = "saucer_small" if self.saucer.kind == "small" else "saucer_large"
+                    self._add_score_popup(self.saucer.position, self.config.scoring[score_key])
                     self._destroy_saucer(by_player=True)
 
         # Saucer bullets -> ship
@@ -242,7 +364,23 @@ class GameWorld:
                     continue
                 if distance(bullet.position, self.ship.position) <= bullet.radius + self.ship.radius:
                     bullet.active = False
+                    self._emit_explosion(self.ship.position, COLOR_SHIP_EXPLOSION)
+                    self._trigger_shake()
                     self._register_ship_loss()
+                    break
+
+        # Saucer bullets -> asteroids (like the original game)
+        for bullet in self.saucer_bullets:
+            if not bullet.active:
+                continue
+            for asteroid in self.asteroids:
+                if not asteroid.alive:
+                    continue
+                if distance(bullet.position, asteroid.position) <= asteroid.radius + bullet.radius:
+                    bullet.active = False
+                    asteroid.alive = False
+                    self._split_asteroid(asteroid)
+                    self._emit_explosion(asteroid.position, COLOR_ASTEROID_EXPLOSION)
                     break
 
         # Cleanup inactive entities that may have been destroyed this frame
@@ -288,13 +426,17 @@ class GameWorld:
     def _check_wave_completion(self, dt: float) -> None:
         if self.asteroids:
             self.wave_clear_timer = 0.0
+            self.wave_clear_pending = True
             return
-        if self.wave_clear_timer == 0.0:
+        if self.wave_clear_pending:
             self.wave_clear_timer = 2.0
+            self.wave_clear_pending = False
         else:
             self.wave_clear_timer -= dt
             if self.wave_clear_timer <= 0.0:
                 self.wave += 1
+                self.wave_announce_timer = self.config.effects.wave_announce_duration
+                self.wave_announce_wave = self.wave
                 self.spawn_wave()
 
     # Convenience getters -----------------------------------------------------
@@ -303,4 +445,4 @@ class GameWorld:
         return self.lives + (1 if self.ship.alive and not self.game_over else 0)
 
 
-__all__ = ["GameWorld", "ControlState"]
+__all__ = ["GameWorld", "ControlState", "ScorePopup"]

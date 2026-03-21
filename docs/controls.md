@@ -13,6 +13,19 @@ Standard-Keymap (siehe auch Spezifikation):
 | Start | `RETURN` |
 | Quit / Back to Title | `ESCAPE` |
 
+## Highscore Name Entry
+
+Bei Erreichen eines Top-10-Scores wird der Namenseingabe-Bildschirm angezeigt:
+
+| Aktion | Taste |
+|--------|-------|
+| Buchstabe hoch | `UP` |
+| Buchstabe runter | `DOWN` |
+| Cursor links | `LEFT` |
+| Cursor rechts | `RIGHT` |
+| Name bestätigen | `RETURN` |
+| Abbrechen | `ESCAPE` |
+
 ## Remapping
 
 - Die Tastenlisten in `config.yaml` können beliebig erweitert werden.

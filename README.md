@@ -1,4 +1,4 @@
-# Asteroids (Python) – Minimal Playable Clone
+# Asteroids (Python) – Enhanced Clone
 
 Diese Codebasis implementiert einen spielbaren **Asteroids**-Klon in Python 3.10+ auf Basis von [pygame](https://www.pygame.org/). Ziel ist eine moderne, gut konfigurierbare Referenzimplementierung, die den klassischen Arcade-Flow (Wellen, Saucers, Punktevergabe, Extra-Leben) respektiert und sich für weitere Iterationen eignet.
 
@@ -10,7 +10,20 @@ Diese Codebasis implementiert einen spielbaren **Asteroids**-Klon in Python 3.10
 - **Build & Tests:** `pytest`
 - **Lizenz:** MIT
 
-Die Runtime trennt klar zwischen Spielwelt-Logik (`GameWorld`), Eingaben (`InputHandler`), Rendering (`Renderer`) und dem High-Level Game-Loop (`AsteroidsGame`). Dadurch lassen sich Komponenten isoliert testen und erweitern.
+Die Runtime trennt klar zwischen Spielwelt-Logik (`GameWorld`), Eingaben (`InputHandler`), Rendering (`Renderer`), Partikeleffekten (`ParticleSystem`) und dem High-Level Game-Loop (`AsteroidsGame`). Dadurch lassen sich Komponenten isoliert testen und erweitern.
+
+## Features
+
+- **Polygon-Asteroiden**: Zufällig generierte, gezackte Polygonformen statt einfacher Kreise, mit Rotation
+- **Partikel-/Explosionssystem**: Farbige Explosionen (grau für Asteroiden, orange für Schiff, rot für Saucer) und Schubflammen-Partikel
+- **Parallax-Sternenhintergrund**: Drei Ebenen von Sternen mit unterschiedlicher Geschwindigkeit
+- **Screen-Shake**: Bildschirmerschütterung bei Explosionen
+- **Bullet-Glow**: Leuchteffekte um Geschosse
+- **Verbessertes Saucer-Design**: Kuppel und blinkende Lichter
+- **Score-Popups**: Aufsteigende Punktanzeigen bei Zerstörungen
+- **Wave-Ankündigungen**: Ein-/Ausblendende Wellenanzeige
+- **Lokales Highscore-System**: Top-10 Bestenliste mit 3-Buchstaben Namenseingabe (Arcade-Stil), JSON-Persistenz
+- **Saucer-Bullet vs. Asteroid Kollision**: Wie im Originalspiel können Saucer-Geschosse Asteroiden zerstören
 
 ## Installation & Setup
 
@@ -39,7 +52,7 @@ Weitere Standard-Belegungen siehe [docs/controls.md](docs/controls.md). Alle Tas
 pytest
 ```
 
-Die Tests laufen headless; die SDL Video-Treiber werden automatisch auf `dummy` gesetzt. Abgedeckt werden u. a. Score-Logik, Saucer-Spawn und Hyperspace-Verhalten.
+Die Tests laufen headless; die SDL Video-Treiber werden automatisch auf `dummy` gesetzt. Abgedeckt werden u. a. Score-Logik, Saucer-Spawn, Hyperspace-Verhalten, Partikelsystem, Highscores und Saucer-Bullet-Kollisionen.
 
 ## Projektstruktur
 
@@ -49,8 +62,10 @@ Die Tests laufen headless; die SDL Video-Treiber werden automatisch auf `dummy` 
 │   ├── config.py            # YAML-Lader & Dataklassen
 │   ├── entities.py          # Ship, Asteroids, Saucer, Bullets
 │   ├── game.py              # High-Level Game Loop & States
+│   ├── highscore.py         # Lokales Highscore-System
 │   ├── input.py             # Keyboard-Mapping
 │   ├── main.py              # CLI-Einstiegspunkt
+│   ├── particles.py         # Partikel-/Explosionssystem
 │   ├── render.py            # Zeichnen via pygame
 │   ├── utils.py             # Mathematische Helferlein
 │   └── world.py             # Kernlogik & Kollisionshandling
@@ -64,13 +79,11 @@ Die Tests laufen headless; die SDL Video-Treiber werden automatisch auf `dummy` 
 - [docs/configuration.md](docs/configuration.md) erklärt alle Konfigurationswerte.
 - [docs/controls.md](docs/controls.md) listet Steuerungen & Remapping.
 - [docs/testing.md](docs/testing.md) fasst QA-Strategie & Checks zusammen.
+- [docs/REVIEW.md](docs/REVIEW.md) enthält das Code-Review der Version 0.2.0.
 
-## Roadmap / Ideen für Iteration 0.3+
+## Roadmap / Ideen für Iteration 0.4+
 
 - Gamepad-Unterstützung (SDL Controller Mapping)
 - Soundeffekte & Musik
-- Partikel-/Explosionssystem
-- Online Highscore / lokale Scoreboards
 - Hot-Reload für Konfigurationsdateien
-
-Viel Spaß beim Zocken und Modden! 🎮
+- Online Highscore

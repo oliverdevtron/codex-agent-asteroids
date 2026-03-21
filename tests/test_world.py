@@ -51,3 +51,70 @@ def test_hyperspace_failure_consumes_life(game_config):
         total_time += 0.5
     assert world.ship.alive
     assert world.lives == initial_lives - 1
+
+
+def test_saucer_bullet_destroys_asteroid(game_config):
+    """Saucer bullets should destroy asteroids on collision (original game behavior)."""
+    world = GameWorld(game_config)
+    world.asteroids.clear()
+    world.bullets.clear()
+    world.saucer_bullets.clear()
+
+    # Spawn a single asteroid
+    world._spawn_asteroid("large", position=Vector2(200, 200), velocity=Vector2(0, 0))
+    assert len(world.asteroids) == 1
+
+    # Place a saucer bullet right on top of the asteroid
+    saucer_bullet = Bullet(
+        position=Vector2(200, 200),
+        velocity=Vector2(0, 0),
+        radius=game_config.bullet.radius,
+        lifetime=2.0,
+        friendly=False,
+    )
+    world.saucer_bullets.append(saucer_bullet)
+
+    world._handle_collisions()
+
+    # The large asteroid should be destroyed and split into medium ones
+    assert not any(a.config.name == "large" for a in world.asteroids)
+    # Saucer bullet should be consumed
+    assert len(world.saucer_bullets) == 0
+
+
+def test_score_popup_created_on_asteroid_destroy(game_config):
+    """Destroying an asteroid with a player bullet should create a score popup."""
+    world = GameWorld(game_config)
+    world.asteroids.clear()
+    world.bullets.clear()
+    world.score_popups.clear()
+
+    world._spawn_asteroid("small", position=Vector2(300, 300), velocity=Vector2(0, 0))
+    bullet = Bullet(
+        position=Vector2(300, 300),
+        velocity=Vector2(),
+        radius=game_config.bullet.radius,
+        lifetime=1.0,
+        friendly=True,
+    )
+    world.bullets.append(bullet)
+    world._handle_collisions()
+
+    assert len(world.score_popups) == 1
+    assert world.score_popups[0].text == f"+{game_config.scoring['small_asteroid']}"
+
+
+def test_wave_clear_flag(game_config):
+    """Wave completion should use a boolean flag, not floating-point comparison."""
+    world = GameWorld(game_config)
+    world.asteroids.clear()  # clear all asteroids
+    world.wave_clear_pending = True
+
+    # First call should start the timer
+    world._check_wave_completion(0.0)
+    assert world.wave_clear_timer == 2.0
+    assert not world.wave_clear_pending
+
+    # Subsequent calls should count down
+    world._check_wave_completion(1.0)
+    assert world.wave_clear_timer == 1.0
