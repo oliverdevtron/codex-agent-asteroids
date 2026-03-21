@@ -45,7 +45,7 @@ Jeder Eintrag beschreibt eine Asteroiden-Größe. `speed_px_per_s` ist ein `[min
 
 - `base_count`: Anzahl großer Asteroiden in Welle 1.
 - `count_growth`: Zuwachs pro Welle.
-- `speed_scale_per_wave`: Multiplikator pro Welle (z. B. 0.06 = +6 % Geschwindigkeit).
+- `speed_scale_per_wave`: Multiplikator pro Welle (z. B. 0.06 = +6 % Geschwindigkeit).
 - `safe_spawn_radius_px`: Mindestabstand zwischen Spawnpunkt und Schiff (nur beim Initial-Spawn).
 
 ## saucer
@@ -70,6 +70,36 @@ Globale Einstellungen plus Substrukturen für `large` und `small`.
 | `min_error_floor_deg` | Untergrenze der Streuung (nur beim kleinen UFO) |
 | `lifetime_s` | `[min, max]` Bildschirmverweildauer |
 | `score` | Punktewert |
+
+## particles
+
+| Schlüssel | Beschreibung |
+|-----------|--------------|
+| `max_particles` | Maximale Anzahl gleichzeitig aktiver Partikel (Pool-Größe). |
+| `explosion_count` | Anzahl der Partikel pro Explosion. |
+| `explosion_speed` | `[min, max]` Geschwindigkeit der Explosionspartikel (px/s). |
+| `explosion_lifetime` | `[min, max]` Lebensdauer der Explosionspartikel (Sekunden). |
+| `thrust_rate` | Partikel pro Sekunde beim Thrust. |
+| `thrust_speed` | `[min, max]` Geschwindigkeit der Schubpartikel. |
+| `thrust_lifetime` | `[min, max]` Lebensdauer der Schubpartikel. |
+
+## effects
+
+| Schlüssel | Beschreibung |
+|-----------|--------------|
+| `screen_shake_intensity` | Maximale Pixel-Verschiebung bei Explosionen. |
+| `screen_shake_duration` | Dauer des Bildschirmshakes in Sekunden. |
+| `score_popup_duration` | Dauer der Score-Popup-Anzeige in Sekunden. |
+| `score_popup_speed` | Aufstiegsgeschwindigkeit der Score-Popups (px/s). |
+| `wave_announce_duration` | Dauer der Wellenankündigung in Sekunden. |
+
+## highscore
+
+| Schlüssel | Beschreibung |
+|-----------|--------------|
+| `max_entries` | Maximale Anzahl an Highscore-Einträgen. |
+| `name_length` | Zeichenlänge für Spielernamen (Arcade-Stil, Standard: 3). |
+| `file_path` | Pfad zur JSON-Datei. `null` = `~/.asteroids_scores.json`. |
 
 ## scoring
 

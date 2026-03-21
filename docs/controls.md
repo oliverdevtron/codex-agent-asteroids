@@ -13,6 +13,19 @@ Standard-Keymap (siehe auch Spezifikation):
 | Start | `RETURN` |
 | Quit / Back to Title | `ESCAPE` |
 
+## Highscore Name Entry
+
+Wenn ein neuer Highscore erreicht wird, erscheint ein Namenseingabe-Bildschirm:
+
+| Aktion | Tasten |
+|--------|--------|
+| Buchstabe eingeben | `A`-`Z` |
+| Buchstabe löschen | `BACKSPACE` |
+| Name bestätigen | `RETURN` |
+| Abbrechen | `ESCAPE` |
+
+Der Name besteht aus maximal 3 Buchstaben (Arcade-Stil).
+
 ## Remapping
 
 - Die Tastenlisten in `config.yaml` können beliebig erweitert werden.

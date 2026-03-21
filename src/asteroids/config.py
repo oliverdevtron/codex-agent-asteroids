@@ -113,6 +113,27 @@ DEFAULT_CONFIG_DATA: Dict[str, Any] = {
         "saucer_large": 200,
         "saucer_small": 1000,
     },
+    "particles": {
+        "max_particles": 500,
+        "explosion_count": 15,
+        "explosion_speed": [50, 200],
+        "explosion_lifetime": [0.3, 1.0],
+        "thrust_rate": 30,
+        "thrust_speed": [30, 80],
+        "thrust_lifetime": [0.2, 0.5],
+    },
+    "effects": {
+        "screen_shake_intensity": 8,
+        "screen_shake_duration": 0.3,
+        "score_popup_duration": 1.0,
+        "score_popup_speed": 60,
+        "wave_announce_duration": 2.0,
+    },
+    "highscore": {
+        "max_entries": 10,
+        "name_length": 3,
+        "file_path": None,
+    },
     "ui": {"show_fps": False, "hud_margin_px": 12},
 }
 
@@ -255,6 +276,33 @@ class SaucerConfig:
 
 
 @dataclass(slots=True)
+class ParticlesConfig:
+    max_particles: int
+    explosion_count: int
+    explosion_speed: Range
+    explosion_lifetime: Range
+    thrust_rate: int
+    thrust_speed: Range
+    thrust_lifetime: Range
+
+
+@dataclass(slots=True)
+class EffectsConfig:
+    screen_shake_intensity: float
+    screen_shake_duration: float
+    score_popup_duration: float
+    score_popup_speed: float
+    wave_announce_duration: float
+
+
+@dataclass(slots=True)
+class HighscoreConfig:
+    max_entries: int
+    name_length: int
+    file_path: Optional[str]
+
+
+@dataclass(slots=True)
 class UIConfig:
     show_fps: bool
     hud_margin_px: float
@@ -270,6 +318,9 @@ class Config:
     saucer: SaucerConfig
     scoring: Mapping[str, int]
     ui: UIConfig
+    particles: ParticlesConfig
+    effects: EffectsConfig
+    highscore: HighscoreConfig
 
 
 def _load_yaml(path: Path) -> Mapping[str, Any]:
@@ -376,6 +427,36 @@ def _parse_saucer(data: Mapping[str, Any]) -> SaucerConfig:
     )
 
 
+def _parse_particles(data: Mapping[str, Any]) -> ParticlesConfig:
+    return ParticlesConfig(
+        max_particles=int(data["max_particles"]),
+        explosion_count=int(data["explosion_count"]),
+        explosion_speed=Range.from_raw(data["explosion_speed"]),
+        explosion_lifetime=Range.from_raw(data["explosion_lifetime"]),
+        thrust_rate=int(data["thrust_rate"]),
+        thrust_speed=Range.from_raw(data["thrust_speed"]),
+        thrust_lifetime=Range.from_raw(data["thrust_lifetime"]),
+    )
+
+
+def _parse_effects(data: Mapping[str, Any]) -> EffectsConfig:
+    return EffectsConfig(
+        screen_shake_intensity=float(data["screen_shake_intensity"]),
+        screen_shake_duration=float(data["screen_shake_duration"]),
+        score_popup_duration=float(data["score_popup_duration"]),
+        score_popup_speed=float(data["score_popup_speed"]),
+        wave_announce_duration=float(data["wave_announce_duration"]),
+    )
+
+
+def _parse_highscore(data: Mapping[str, Any]) -> HighscoreConfig:
+    return HighscoreConfig(
+        max_entries=int(data["max_entries"]),
+        name_length=int(data["name_length"]),
+        file_path=data.get("file_path"),
+    )
+
+
 def _parse_ui(data: Mapping[str, Any]) -> UIConfig:
     return UIConfig(
         show_fps=bool(data["show_fps"]),
@@ -413,6 +494,9 @@ def load_config(path: Optional[Path | str] = None) -> Config:
         saucer=_parse_saucer(data["saucer"]),
         scoring={k: int(v) for k, v in data["scoring"].items()},
         ui=_parse_ui(data["ui"]),
+        particles=_parse_particles(data["particles"]),
+        effects=_parse_effects(data["effects"]),
+        highscore=_parse_highscore(data["highscore"]),
     )
 
 
@@ -427,6 +511,9 @@ __all__ = [
     "AsteroidSpawnConfig",
     "SaucerConfig",
     "SaucerTypeConfig",
+    "ParticlesConfig",
+    "EffectsConfig",
+    "HighscoreConfig",
     "UIConfig",
     "Range",
     "load_config",

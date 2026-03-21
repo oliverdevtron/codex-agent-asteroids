@@ -8,6 +8,7 @@ from typing import Optional
 import pygame
 
 from .config import Config, load_config
+from .highscore import HighscoreManager
 from .input import FrameActions, InputHandler
 from .render import Renderer
 from .world import GameWorld
@@ -18,6 +19,7 @@ class GameMode(str, Enum):
     PLAYING = "playing"
     PAUSED = "paused"
     GAME_OVER = "game_over"
+    HIGHSCORE_ENTRY = "highscore_entry"
 
 
 class AsteroidsGame:
@@ -33,15 +35,31 @@ class AsteroidsGame:
         self.input_handler = InputHandler(self.config.controls)
         self.mode = GameMode.TITLE
         self.running = True
+        # Highscore system
+        hs_path = None
+        if self.config.highscore.file_path:
+            hs_path = Path(self.config.highscore.file_path)
+        self.highscore_manager = HighscoreManager(
+            max_entries=self.config.highscore.max_entries,
+            file_path=hs_path,
+        )
+        self.entry_name = ""
 
     def run(self) -> None:
         while self.running:
             dt = self.clock.tick(self.config.game.fps) / 1000.0
             events = pygame.event.get()
-            actions = self.input_handler.process_events(events)
-            self._dispatch(actions, dt)
+            if self.mode == GameMode.HIGHSCORE_ENTRY:
+                self._handle_highscore_events(events)
+            else:
+                actions = self.input_handler.process_events(events)
+                self._dispatch(actions, dt)
             fps = self.clock.get_fps()
             self.renderer.draw(self.world, self.mode.value, fps=fps)
+            # Overlay for highscore entry
+            if self.mode == GameMode.HIGHSCORE_ENTRY:
+                self.renderer.draw_name_entry(self.entry_name)
+                pygame.display.flip()
         pygame.quit()
 
     def _dispatch(self, actions: FrameActions, dt: float) -> None:
@@ -73,7 +91,11 @@ class AsteroidsGame:
             return
         self.world.update(dt, actions.controls)
         if self.world.game_over:
-            self.mode = GameMode.GAME_OVER
+            if self.highscore_manager.qualifies(self.world.score):
+                self.entry_name = ""
+                self.mode = GameMode.HIGHSCORE_ENTRY
+            else:
+                self.mode = GameMode.GAME_OVER
 
     def _handle_paused(self, actions: FrameActions) -> None:
         if actions.pause or actions.start:
@@ -85,6 +107,28 @@ class AsteroidsGame:
             self.mode = GameMode.PLAYING
         elif actions.pause:
             self.mode = GameMode.TITLE
+
+    def _handle_highscore_events(self, events: list) -> None:
+        max_len = self.config.highscore.name_length
+        for event in events:
+            if event.type == pygame.QUIT:
+                self.running = False
+                return
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.mode = GameMode.GAME_OVER
+                    return
+                if event.key == pygame.K_RETURN:
+                    if len(self.entry_name) > 0:
+                        self.highscore_manager.add(
+                            self.entry_name, self.world.score, self.world.wave
+                        )
+                        self.mode = GameMode.GAME_OVER
+                        return
+                elif event.key == pygame.K_BACKSPACE:
+                    self.entry_name = self.entry_name[:-1]
+                elif len(self.entry_name) < max_len and event.unicode.isalpha():
+                    self.entry_name += event.unicode.upper()
 
 
 def run(config_path: Optional[Path] = None) -> None:

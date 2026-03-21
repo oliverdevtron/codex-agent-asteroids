@@ -4,9 +4,12 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 from .utils import Vector2, angle_to_vector, clamp, wrap_position
+
+# Named constant for bullet spawn offset from ship nose
+BULLET_SPAWN_OFFSET = 6
 
 
 @dataclass(slots=True)
@@ -68,7 +71,7 @@ class Ship:
         self.position = wrap_position(
             self.position, width, height, margin=self.config.wrap_margin_px
         )
-        self.velocity *= 0.999  # subtle damping to avoid runaway rounding errors
+        self.velocity *= 0.999 ** (dt * 60)  # frame-rate-independent damping
 
         if self.fire_cooldown > 0.0:
             self.fire_cooldown -= dt
@@ -99,7 +102,7 @@ class Ship:
             return None
         direction = angle_to_vector(self.angle)
         bullet_velocity = direction * self.bullet_config.speed_px_per_s + self.velocity
-        bullet_position = self.position + direction * (self.radius + 6)
+        bullet_position = self.position + direction * (self.radius + BULLET_SPAWN_OFFSET)
         bullet = Bullet(
             position=bullet_position,
             velocity=bullet_velocity,
@@ -144,13 +147,19 @@ class Ship:
 
 
 class Asteroid:
-    def __init__(self, size_config, position: Vector2, velocity: Vector2) -> None:
+    def __init__(self, size_config, position: Vector2, velocity: Vector2, rng: Optional[random.Random] = None) -> None:
         self.config = size_config
         self.position = Vector2(position)
         self.velocity = Vector2(velocity)
         self.alive = True
-        self.angle = random.uniform(0, 360)
-        self.spin = random.uniform(-40, 40)
+        _rng = rng if rng is not None else random.Random()
+        self.angle = _rng.uniform(0, 360)
+        self.spin = _rng.uniform(-40, 40)
+        self.vertices: List[float] = self._generate_vertices(_rng)
+
+    def _generate_vertices(self, rng: random.Random, num_points: int = 10) -> List[float]:
+        """Generate random radial offsets for polygon asteroid rendering."""
+        return [rng.uniform(0.7, 1.0) for _ in range(num_points)]
 
     @property
     def radius(self) -> float:
@@ -165,8 +174,9 @@ class Asteroid:
 
 
 class Saucer:
-    def __init__(self, config, kind: str, position: Vector2, direction: int, rng: random.Random) -> None:
+    def __init__(self, config, bullet_config, kind: str, position: Vector2, direction: int, rng: random.Random) -> None:
         self.config = config
+        self.bullet_config = bullet_config
         self.kind = kind  # 'large' or 'small'
         self.type_config = config.large if kind == "large" else config.small
         self.position = Vector2(position)
@@ -221,8 +231,8 @@ class Saucer:
         bullet = Bullet(
             position=self.position + direction * (self.radius + 4),
             velocity=direction * bullet_speed,
-            radius=3,
-            lifetime=1.4,
+            radius=self.bullet_config.radius,
+            lifetime=self.bullet_config.lifetime_s,
             friendly=False,
         )
         self.reset_fire_timer(rng)
@@ -240,4 +250,4 @@ def build_ship(config, width: float, height: float) -> Ship:
     return ship
 
 
-__all__ = ["Ship", "Asteroid", "Saucer", "Bullet", "build_ship"]
+__all__ = ["Ship", "Asteroid", "Saucer", "Bullet", "build_ship", "BULLET_SPAWN_OFFSET"]

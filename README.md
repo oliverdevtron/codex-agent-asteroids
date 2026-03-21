@@ -12,6 +12,22 @@ Diese Codebasis implementiert einen spielbaren **Asteroids**-Klon in Python 3.10
 
 Die Runtime trennt klar zwischen Spielwelt-Logik (`GameWorld`), Eingaben (`InputHandler`), Rendering (`Renderer`) und dem High-Level Game-Loop (`AsteroidsGame`). Dadurch lassen sich Komponenten isoliert testen und erweitern.
 
+## Features
+
+- Klassisches Asteroids-Gameplay mit Wellen, Saucers und Extra-Leben
+- **Partikel-/Explosionssystem** mit unterschiedlichen Farben pro Entity-Typ
+- **Parallax-Starfield** Hintergrund (3 Ebenen)
+- **Polygon-Asteroiden** mit individuellen, zufälligen Formen und Rotation
+- **Schubflammen-Animation** am Schiff beim Beschleunigen
+- **Bullet-Glow-Effekte** für bessere Sichtbarkeit
+- **Verbessertes Saucer-Design** mit Kuppel und blinkenden Lichtern
+- **Bildschirmshake** bei Explosionen (konfigurierbar)
+- **Wellenankündigungen** ("WAVE X" mit Ein-/Ausblendung)
+- **Score-Popups** an der Zerstörungsstelle
+- **Lokales Highscore-System** mit 3-Buchstaben-Namenentry (Arcade-Stil, JSON-Persistenz)
+- **Saucer-Bullets zerstören Asteroiden** (wie im Original-Arcade-Spiel)
+- Vollständig konfigurierbar über `config.yaml`
+
 ## Installation & Setup
 
 1. Abhängigkeiten installieren (empfohlen in einem virtuellen Environment):
@@ -39,7 +55,7 @@ Weitere Standard-Belegungen siehe [docs/controls.md](docs/controls.md). Alle Tas
 pytest
 ```
 
-Die Tests laufen headless; die SDL Video-Treiber werden automatisch auf `dummy` gesetzt. Abgedeckt werden u. a. Score-Logik, Saucer-Spawn und Hyperspace-Verhalten.
+Die Tests laufen headless; die SDL Video-Treiber werden automatisch auf `dummy` gesetzt. Abgedeckt werden u. a. Score-Logik, Saucer-Spawn, Hyperspace-Verhalten, Partikelsystem, Highscores und Saucer-Bullet-Kollisionen.
 
 ## Projektstruktur
 
@@ -49,8 +65,10 @@ Die Tests laufen headless; die SDL Video-Treiber werden automatisch auf `dummy` 
 │   ├── config.py            # YAML-Lader & Dataklassen
 │   ├── entities.py          # Ship, Asteroids, Saucer, Bullets
 │   ├── game.py              # High-Level Game Loop & States
+│   ├── highscore.py         # Lokale Highscore-Persistenz
 │   ├── input.py             # Keyboard-Mapping
 │   ├── main.py              # CLI-Einstiegspunkt
+│   ├── particles.py         # Partikel-/Explosionssystem
 │   ├── render.py            # Zeichnen via pygame
 │   ├── utils.py             # Mathematische Helferlein
 │   └── world.py             # Kernlogik & Kollisionshandling
@@ -64,13 +82,11 @@ Die Tests laufen headless; die SDL Video-Treiber werden automatisch auf `dummy` 
 - [docs/configuration.md](docs/configuration.md) erklärt alle Konfigurationswerte.
 - [docs/controls.md](docs/controls.md) listet Steuerungen & Remapping.
 - [docs/testing.md](docs/testing.md) fasst QA-Strategie & Checks zusammen.
+- [docs/REVIEW.md](docs/REVIEW.md) enthält die Code-Review-Ergebnisse.
 
 ## Roadmap / Ideen für Iteration 0.3+
 
 - Gamepad-Unterstützung (SDL Controller Mapping)
 - Soundeffekte & Musik
-- Partikel-/Explosionssystem
-- Online Highscore / lokale Scoreboards
+- Online Highscore-Tabelle
 - Hot-Reload für Konfigurationsdateien
-
-Viel Spaß beim Zocken und Modden! 🎮

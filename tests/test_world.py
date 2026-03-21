@@ -1,6 +1,6 @@
 """Tests for the game world behaviour."""
 
-from asteroids.entities import Bullet
+from asteroids.entities import Asteroid, Bullet
 from asteroids.utils import Vector2
 from asteroids.world import ControlState, GameWorld
 
@@ -51,3 +51,60 @@ def test_hyperspace_failure_consumes_life(game_config):
         total_time += 0.5
     assert world.ship.alive
     assert world.lives == initial_lives - 1
+
+
+def test_saucer_bullet_destroys_asteroid(game_config):
+    """Saucer bullets should destroy asteroids (like original arcade game)."""
+    world = GameWorld(game_config)
+    world.asteroids.clear()
+    world.saucer_bullets.clear()
+    world._spawn_asteroid("large", position=Vector2(200, 200), velocity=Vector2(0, 0))
+    assert len(world.asteroids) == 1
+    # Place a saucer bullet right on top of the asteroid
+    saucer_bullet = Bullet(
+        position=Vector2(200, 200),
+        velocity=Vector2(0, 0),
+        radius=game_config.bullet.radius,
+        lifetime=2.0,
+        friendly=False,
+    )
+    world.saucer_bullets.append(saucer_bullet)
+    old_score = world.score
+    world._handle_collisions()
+    # The large asteroid should be destroyed (split into mediums)
+    assert all(a.config.name != "large" for a in world.asteroids)
+    # Score should NOT increase (saucer bullets don't award player points)
+    assert world.score == old_score
+
+
+def test_wave_announcement_triggered(game_config):
+    """When a wave completes, a wave announcement should trigger."""
+    world = GameWorld(game_config)
+    world.asteroids.clear()
+    world.wave_clear_pending = True
+    # First call sets the timer
+    world._check_wave_completion(0.0)
+    assert not world.wave_clear_pending
+    assert world.wave_clear_timer == 2.0
+    # Advance past the timer
+    world._check_wave_completion(2.5)
+    assert world.wave_announce_timer > 0
+    assert "WAVE" in world.wave_announce_text
+
+
+def test_score_popup_created(game_config):
+    """Scoring with a position should create a popup."""
+    world = GameWorld(game_config)
+    world._add_score(100, position=Vector2(50, 50))
+    assert len(world.score_popups) == 1
+    assert world.score_popups[0].text == "+100"
+
+
+def test_screen_shake_decays(game_config):
+    """Screen shake should decay over time."""
+    world = GameWorld(game_config)
+    world._trigger_shake(1.0)
+    assert world.shake_timer > 0
+    world._update_shake(world.shake_timer + 0.1)
+    assert world.shake_timer == 0.0
+    assert world.shake_intensity == 0.0
