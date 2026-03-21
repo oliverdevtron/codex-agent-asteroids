@@ -109,3 +109,39 @@ Zuordnung zwischen Ereignis und Punkten. Die Werte spiegeln 1:1 die Tabellen aus
 
 - `show_fps`: Blendet FPS oben rechts ein.
 - `hud_margin_px`: Abstand von Score/Leben/Wave zum Rand.
+
+## particles
+
+Konfiguration des Partikelsystems für Explosionen und Schubeffekte.
+
+| Schlüssel | Beschreibung |
+|-----------|--------------|
+| `max_particles` | Maximale Anzahl gleichzeitig aktiver Partikel (Pool-Größe). |
+| `explosion_count` | Anzahl der Partikel pro Explosion. |
+| `explosion_speed` | `[min, max]` Geschwindigkeit der Explosionspartikel in px/s. |
+| `explosion_lifetime` | `[min, max]` Lebensdauer der Explosionspartikel in Sekunden. |
+| `thrust_rate` | Anzahl Schubpartikel pro Sekunde. |
+| `thrust_speed` | `[min, max]` Geschwindigkeit der Schubpartikel in px/s. |
+| `thrust_lifetime` | `[min, max]` Lebensdauer der Schubpartikel in Sekunden. |
+
+## effects
+
+Visuelle Effekte und Overlay-Konfiguration.
+
+| Schlüssel | Beschreibung |
+|-----------|--------------|
+| `screen_shake_intensity` | Maximale Bildschirmverschiebung bei Explosionen (Pixel). |
+| `screen_shake_duration` | Dauer des Screen-Shakes in Sekunden. |
+| `score_popup_duration` | Anzeigedauer von Score-Popups in Sekunden. |
+| `score_popup_speed` | Aufstiegsgeschwindigkeit der Score-Popups in px/s. |
+| `wave_announce_duration` | Dauer der Wave-Ankündigung in Sekunden. |
+
+## highscore
+
+Lokale Highscore-Persistenz.
+
+| Schlüssel | Beschreibung |
+|-----------|--------------|
+| `max_entries` | Maximale Anzahl gespeicherter Highscores. |
+| `name_length` | Zeichenanzahl für den Spielernamen (Arcade-Stil). |
+| `file_path` | Pfad zur JSON-Datei. `null` = `~/.asteroids_scores.json`. |

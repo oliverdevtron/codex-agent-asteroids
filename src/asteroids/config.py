@@ -135,6 +135,27 @@ DEFAULT_CONFIG_DATA: Dict[str, Any] = {
         "file_path": None,
     },
     "ui": {"show_fps": False, "hud_margin_px": 12},
+    "particles": {
+        "max_particles": 500,
+        "explosion_count": 15,
+        "explosion_speed": [50, 200],
+        "explosion_lifetime": [0.3, 1.0],
+        "thrust_rate": 30,
+        "thrust_speed": [30, 80],
+        "thrust_lifetime": [0.2, 0.5],
+    },
+    "effects": {
+        "screen_shake_intensity": 8,
+        "screen_shake_duration": 0.3,
+        "score_popup_duration": 1.0,
+        "score_popup_speed": 60,
+        "wave_announce_duration": 2.0,
+    },
+    "highscore": {
+        "max_entries": 10,
+        "name_length": 3,
+        "file_path": None,
+    },
 }
 
 
@@ -309,6 +330,33 @@ class UIConfig:
 
 
 @dataclass(slots=True)
+class ParticlesConfig:
+    max_particles: int
+    explosion_count: int
+    explosion_speed: Range
+    explosion_lifetime: Range
+    thrust_rate: int
+    thrust_speed: Range
+    thrust_lifetime: Range
+
+
+@dataclass(slots=True)
+class EffectsConfig:
+    screen_shake_intensity: float
+    screen_shake_duration: float
+    score_popup_duration: float
+    score_popup_speed: float
+    wave_announce_duration: float
+
+
+@dataclass(slots=True)
+class HighscoreConfig:
+    max_entries: int
+    name_length: int
+    file_path: Optional[str]
+
+
+@dataclass(slots=True)
 class Config:
     game: GameConfig
     controls: ControlsConfig
@@ -464,6 +512,36 @@ def _parse_ui(data: Mapping[str, Any]) -> UIConfig:
     )
 
 
+def _parse_particles(data: Mapping[str, Any]) -> ParticlesConfig:
+    return ParticlesConfig(
+        max_particles=int(data["max_particles"]),
+        explosion_count=int(data["explosion_count"]),
+        explosion_speed=Range.from_raw(data["explosion_speed"]),
+        explosion_lifetime=Range.from_raw(data["explosion_lifetime"]),
+        thrust_rate=int(data["thrust_rate"]),
+        thrust_speed=Range.from_raw(data["thrust_speed"]),
+        thrust_lifetime=Range.from_raw(data["thrust_lifetime"]),
+    )
+
+
+def _parse_effects(data: Mapping[str, Any]) -> EffectsConfig:
+    return EffectsConfig(
+        screen_shake_intensity=float(data["screen_shake_intensity"]),
+        screen_shake_duration=float(data["screen_shake_duration"]),
+        score_popup_duration=float(data["score_popup_duration"]),
+        score_popup_speed=float(data["score_popup_speed"]),
+        wave_announce_duration=float(data["wave_announce_duration"]),
+    )
+
+
+def _parse_highscore(data: Mapping[str, Any]) -> HighscoreConfig:
+    return HighscoreConfig(
+        max_entries=int(data["max_entries"]),
+        name_length=int(data["name_length"]),
+        file_path=data.get("file_path"),
+    )
+
+
 def _parse_game(data: Mapping[str, Any]) -> GameConfig:
     window = data["window"]
     return GameConfig(
@@ -484,6 +562,12 @@ def load_config(path: Optional[Path | str] = None) -> Config:
         path = Path(path)
 
     data = _load_yaml(path)
+
+    # Merge defaults for optional new sections
+    defaults = DEFAULT_CONFIG_DATA
+    for key in ("particles", "effects", "highscore"):
+        if key not in data:
+            data[key] = copy.deepcopy(defaults[key])
 
     return Config(
         game=_parse_game(data["game"]),
@@ -515,6 +599,9 @@ __all__ = [
     "EffectsConfig",
     "HighscoreConfig",
     "UIConfig",
+    "ParticlesConfig",
+    "EffectsConfig",
+    "HighscoreConfig",
     "Range",
     "load_config",
 ]

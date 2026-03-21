@@ -146,6 +146,15 @@ class Ship:
         return not self.alive and self.respawn_timer <= 0.0
 
 
+def _generate_polygon_vertices(rng: random.Random, radius: float, num_points: int = 10) -> List[float]:
+    """Generate jagged polygon vertex offsets for an asteroid.
+
+    Returns a list of radius multipliers (one per vertex) that, when combined
+    with equally-spaced angles, produce an irregular polygon shape.
+    """
+    return [rng.uniform(0.7, 1.0) * radius for _ in range(num_points)]
+
+
 class Asteroid:
     def __init__(self, size_config, position: Vector2, velocity: Vector2, rng: Optional[random.Random] = None) -> None:
         self.config = size_config
@@ -229,7 +238,7 @@ class Saucer:
                 angle = base_angle + rng.gauss(0, sigma)
         direction = angle_to_vector(angle)
         bullet = Bullet(
-            position=self.position + direction * (self.radius + 4),
+            position=self.position + direction * (self.radius + BULLET_SPAWN_OFFSET),
             velocity=direction * bullet_speed,
             radius=self.bullet_config.radius,
             lifetime=self.bullet_config.lifetime_s,
