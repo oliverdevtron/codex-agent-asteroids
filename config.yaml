@@ -113,24 +113,3 @@ highscore:
 ui:
   show_fps: false
   hud_margin_px: 12
-
-particles:
-  max_particles: 500
-  explosion_count: 15
-  explosion_speed: [50, 200]
-  explosion_lifetime: [0.3, 1.0]
-  thrust_rate: 30
-  thrust_speed: [30, 80]
-  thrust_lifetime: [0.2, 0.5]
-
-effects:
-  screen_shake_intensity: 8
-  screen_shake_duration: 0.3
-  score_popup_duration: 1.0
-  score_popup_speed: 60
-  wave_announce_duration: 2.0
-
-highscore:
-  max_entries: 10
-  name_length: 3
-  file_path: null
