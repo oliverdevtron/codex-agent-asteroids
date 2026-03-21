@@ -1,2 +1,0 @@
-[console_scripts]
-asteroids = asteroids.main:main
